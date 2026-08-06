@@ -18,11 +18,11 @@ export async function optimizeCV(cvData: CVData) {
     ${cvData.targetJob}
     
     TAREA:
-    1. Optimiza Título.
-    2. Genera un Perfil Profesional (Summary) de 3 a 5 líneas impactante.
-    3. Reescribe experiencias (formato STAR + keywords).
-    4. Sugiere skills técnicas.
-    5. Score compatibilidad (0-100).
+    1. Optimiza Título profesional sin inventar roles falsos.
+    2. Genera un Perfil Profesional (Summary) de 3 a 5 líneas de alto impacto para vender profesionalmente al candidato.
+    3. Reescribe las descripciones de experiencia laboral (formato STAR + keywords relevantes) de la forma más profesional y atractiva posible.
+    4. REGLA ESTRICTA DE HABILIDADES: NO agregues NINGUNA habilidad técnica nueva (skills.tech) que no esté en el CV del candidato. Mantén ÚNICAMENTE sus habilidades existentes verdaderas.
+    5. Score de compatibilidad (0-100).
     
     Responde JSON:
     {
@@ -115,11 +115,11 @@ export async function generateOptimizedCV(userData: CVData, jobDescription: stri
     ${jobDescription}
     
     INSTRUCCIONES:
-    1. Mantén info real.
-    2. Genera un Perfil Profesional (Summary) de 3 a 5 líneas que venda el perfil para este puesto.
-    3. Reescribe experiencias para resaltar logros alineados a la vacante (keywords).
-    4. Sugiere skills técnicas requeridas.
-    5. El resultado debe ser un CV completo listo para usar.
+    1. Mantén la información real del usuario intacta (experiencias, formación, empresas).
+    2. Genera un Perfil Profesional (Summary) de 3 a 5 líneas con un tono ejecutivo y comercial que venda de forma óptima el perfil para esta posición.
+    3. Reescribe las descripciones de las experiencias laborales para resaltar logros cuantificables y palabras clave relevantes del puesto.
+    4. REGLA OBLIGATORIA: NO inventes ni agregues NINGUNA habilidad técnica (skills.tech) que no haya sido declarada originalmente por el usuario. Conserva únicamente sus habilidades técnicas reales.
+    5. El resultado debe ser un CV completo listo para presentar.
     
     Responde JSON con estructura CVData.
   `;

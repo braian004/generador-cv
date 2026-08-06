@@ -14,14 +14,39 @@
 @layer utilities {
   @media print {
     @page {
-      size: A4;
+      size: A4 portrait;
       margin: 0;
     }
-    body {
-      background: white !important;
+    html, body {
+      background: #ffffff !important;
+      color: #000000 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 210mm !important;
+      height: auto !important;
+      overflow: visible !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
     .no-print {
       display: none !important;
+    }
+    .cv-paper,
+    [data-cv-paper] {
+      width: 210mm !important;
+      min-height: 297mm !important;
+      max-width: none !important;
+      margin: 0 auto !important;
+      padding: 12mm 15mm !important;
+      box-shadow: none !important;
+      border: none !important;
+      border-radius: 0 !important;
+      transform: none !important;
+      position: static !important;
+      background: #ffffff !important;
+    }
+    a {
+      text-decoration: none !important;
     }
   }
 }

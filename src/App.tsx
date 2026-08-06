@@ -1,14 +1,16 @@
 import React, { useState, useRef } from 'react';
 import { CVForm } from './components/CVForm';
 import { CVPreview } from './components/CVPreview';
+import { CVViewerContainer } from './components/CVViewerContainer';
+import { ThemeCustomizer } from './components/ThemeCustomizer';
 import { Pricing } from './components/Pricing';
 import { FeaturesInfo } from './components/FeaturesInfo';
 import { StepIndicator } from './components/StepIndicator';
 import { CVData, initialCVData } from './types';
-import { Info, X } from 'lucide-react';
+import { Info, X, Eye } from 'lucide-react';
 import { optimizeCV, parseCVFromText, generateOptimizedCV, analyzeATS } from './services/gemini';
 import { useReactToPrint } from 'react-to-print';
-import { Download, Sparkles, Loader2, CheckCircle2, AlertCircle, Upload, FileText, FileDown, Search, Target, Zap } from 'lucide-react';
+import { Download, Sparkles, Loader2, CheckCircle2, AlertCircle, Upload, FileText, FileDown, Search, Target, Zap, Printer } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as pdfjs from 'pdfjs-dist';
 import html2canvas from 'html2canvas';
@@ -22,7 +24,9 @@ export default function App() {
   const [hasPaid, setHasPaid] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+  const [showCustomizer, setShowCustomizer] = useState(true);
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
+  const [mobileTab, setMobileTab] = useState<'edit' | 'preview'>('edit');
   const [cvData, setCvData] = useState<CVData>(initialCVData);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
@@ -63,12 +67,115 @@ export default function App() {
   const handlePrint = useReactToPrint({
     contentRef: previewRef,
     documentTitle: `CV_${cvData.personalInfo?.fullName?.replace(/\s+/g, '_') || 'Master'}`,
+    pageStyle: `
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+      @media print {
+        html, body {
+          background: #ffffff !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 210mm !important;
+          height: auto !important;
+          overflow: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .no-print {
+          display: none !important;
+        }
+        div, section, article {
+          transform: none !important;
+        }
+        a {
+          text-decoration: none !important;
+        }
+      }
+    `,
     onPrintError: (errorLocation, error) => {
       console.error('Print error:', errorLocation, error);
-      // Fallback to direct print if iframe fails
       window.print();
     }
   });
+
+  const handleVectorDownload = async () => {
+    if (!hasPaid) {
+      setShowPricing(true);
+      return;
+    }
+    if (!previewRef.current) return;
+
+    setIsDownloading(true);
+    setProgress(15);
+
+    try {
+      const paper = previewRef.current;
+      const fullName = cvData.personalInfo?.fullName?.replace(/\s+/g, '_') || 'Master';
+      const fileName = `CV_${fullName}_Vectorial.pdf`;
+
+      // Clone element to an unscaled offscreen container (210mm = 794px @ 96 DPI)
+      const clone = paper.cloneNode(true) as HTMLElement;
+      
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'fixed';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '794px';
+      tempContainer.style.backgroundColor = '#ffffff';
+      tempContainer.style.zIndex = '-9999';
+
+      clone.style.transform = 'none';
+      clone.style.margin = '0';
+      clone.style.boxShadow = 'none';
+      clone.style.width = '794px';
+      clone.style.minHeight = '1123px';
+
+      tempContainer.appendChild(clone);
+      document.body.appendChild(tempContainer);
+
+      setProgress(40);
+
+      const html2pdfModule = (await import('html2pdf.js')).default;
+
+      const opt = {
+        margin: 0,
+        filename: fileName,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          logging: false,
+          backgroundColor: '#ffffff',
+          letterRendering: true,
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait' as const,
+          compress: true,
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      setProgress(75);
+
+      await html2pdfModule().set(opt).from(clone).save();
+
+      document.body.removeChild(tempContainer);
+      setProgress(100);
+    } catch (err) {
+      console.error('Error vector downloading, running print fallback:', err);
+      handlePrint();
+    } finally {
+      setTimeout(() => {
+        setIsDownloading(false);
+        setProgress(0);
+      }, 500);
+    }
+  };
 
   const handleOptimize = async () => {
     if (!cvData.targetJob) {
@@ -120,22 +227,22 @@ export default function App() {
 
       // Progress simulation
       const interval = setInterval(() => {
-        setProgress(prev => (prev < 90 ? prev + 10 : prev));
-      }, 300);
+        setProgress(prev => (prev < 90 ? prev + 15 : prev));
+      }, 200);
 
       const canvas = await html2canvas(paper, {
         scale: 2,
         useCORS: true,
+        allowTaint: false,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: paper.scrollWidth,
-        windowHeight: paper.scrollHeight
+        imageTimeout: 5000,
       });
 
       clearInterval(interval);
       setProgress(95);
 
-      const imgData = canvas.toDataURL('image/png', 1.0);
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdfWidth = 210;
       const canvasWidth = canvas.width;
       const canvasHeight = canvas.height;
@@ -147,23 +254,115 @@ export default function App() {
         format: [pdfWidth, pdfHeight]
       });
 
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
       
-      // Attempt to add clickable links manually for common fields
-      // This is a simplified approach as calculating exact positions is hard with html2canvas
-      // But we can at least make the email and linkedin clickable if they are in the header area
-      // For now, we'll stick to the image approach but ensure it can be downloaded multiple times
+      // Inject clickable link annotations for all <a> tags inside the CV paper
+      const paperRect = paper.getBoundingClientRect();
+      const paperW = paperRect.width || paper.offsetWidth;
+      const paperH = paperRect.height || paper.offsetHeight;
+
+      const scaleX = pdfWidth / paperW;
+      const scaleY = pdfHeight / paperH;
+
+      const linkElements = paper.querySelectorAll<HTMLAnchorElement>('a[href]');
+      linkElements.forEach((aEl) => {
+        try {
+          const rawHref = aEl.getAttribute('href') || aEl.href;
+          if (!rawHref || rawHref === '#' || rawHref.startsWith('javascript:')) return;
+
+          let url = rawHref.trim();
+          if (
+            !url.startsWith('http://') &&
+            !url.startsWith('https://') &&
+            !url.startsWith('mailto:') &&
+            !url.startsWith('tel:')
+          ) {
+            url = `https://${url}`;
+          }
+
+          const aRect = aEl.getBoundingClientRect();
+          if (aRect.width > 0 && aRect.height > 0) {
+            const pdfX = (aRect.left - paperRect.left) * scaleX;
+            const pdfY = (aRect.top - paperRect.top) * scaleY;
+            const pdfW = aRect.width * scaleX;
+            const pdfH = aRect.height * scaleY;
+            pdf.link(pdfX, pdfY, pdfW, pdfH, { url });
+          }
+        } catch (e) {
+          console.warn("Could not attach link annotation:", e);
+        }
+      });
       
       pdf.save(fileName);
       setProgress(100);
     } catch (err) {
-      console.error('Error generating PDF:', err);
-      setError('No se pudo generar el PDF. Por favor usa la opción de imprimir.');
+      console.error('Error generating PDF, attempting print fallback:', err);
+      handlePrint();
     } finally {
       setTimeout(() => {
         setIsDownloading(false);
         setProgress(0);
       }, 500);
+    }
+  };
+
+  const handleDownloadHTML = () => {
+    if (!hasPaid) {
+      setShowPricing(true);
+      return;
+    }
+    if (!previewRef.current) return;
+
+    try {
+      const paperHtml = previewRef.current.outerHTML;
+      const fileName = `CV_${cvData.personalInfo?.fullName?.replace(/\s+/g, '_') || 'Master'}.html`;
+
+      const fullHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CV - ${cvData.personalInfo?.fullName || 'Curriculum'}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body {
+      background-color: #0f172a;
+      color: #0f172a;
+      font-family: 'Inter', system-ui, sans-serif;
+      margin: 0;
+      padding: 24px 12px;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    a {
+      color: #1d4ed8 !important;
+      text-decoration: underline !important;
+      font-weight: 600 !important;
+    }
+    a:hover {
+      color: #1e40af !important;
+    }
+  </style>
+</head>
+<body>
+  ${paperHtml}
+</body>
+</html>`;
+
+      const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error exporting HTML:', err);
+      setError('No se pudo descargar el archivo HTML.');
     }
   };
 
@@ -301,19 +500,41 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'application/pdf') {
-      setError('Por favor, sube un archivo PDF válido.');
-      return;
-    }
-
     setIsParsing(true);
     setError(null);
     try {
-      const text = await extractTextFromPDF(file);
+      let text = '';
+      const fileType = file.type;
+      const fileName = file.name.toLowerCase();
+
+      if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
+        text = await extractTextFromPDF(file);
+      } else if (
+        fileType.includes('html') ||
+        fileName.endsWith('.html') ||
+        fileName.endsWith('.htm')
+      ) {
+        const rawHtml = await file.text();
+        text = rawHtml
+          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+          .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      } else {
+        // Plain text, JSON, RTF, Markdown, or other text files
+        const rawText = await file.text();
+        text = rawText.replace(/\s+/g, ' ').trim();
+      }
+
+      if (!text || text.trim().length < 10) {
+        throw new Error('No se pudo extraer texto legible del archivo. Verifica que contenga texto.');
+      }
+
       const parsedData = await parseCVFromText(text);
       
       if (!parsedData || !parsedData.personalInfo || (!parsedData.personalInfo.fullName && !parsedData.experiences?.length)) {
-        throw new Error('La IA no pudo identificar datos válidos en el PDF.');
+        throw new Error('La IA no pudo identificar datos de CV en el archivo subido.');
       }
 
       // Asegurar que la estructura sea completa y que cada elemento tenga un ID único
@@ -341,7 +562,7 @@ export default function App() {
 
       setCvData(validatedData);
     } catch (err: any) {
-      setError(err.message || 'Error al procesar el PDF.');
+      setError(err.message || 'Error al procesar el archivo subido.');
       console.error(err);
     } finally {
       setIsParsing(false);
@@ -399,7 +620,7 @@ export default function App() {
               type="file"
               ref={fileInputRef}
               onChange={handleFileUpload}
-              accept=".pdf"
+              accept=".pdf,.html,.htm,.txt,.json,.docx,.doc,.rtf,image/*,text/*"
               className="hidden"
             />
             {currentStep === 2 && (
@@ -407,10 +628,10 @@ export default function App() {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isParsing}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-3 md:px-4 py-2 rounded-xl font-bold transition-all active:scale-95 border border-slate-700"
-                title="Subir CV existente"
+                title="Subir CV en PDF, HTML, TXT, Word, etc."
               >
                 {isParsing ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                <span className="whitespace-nowrap text-xs md:text-sm">Subir PDF</span>
+                <span className="whitespace-nowrap text-xs md:text-sm">Subir Archivo / CV</span>
               </button>
             )}
             <button
@@ -483,43 +704,215 @@ export default function App() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="flex flex-col lg:flex-row gap-8 h-full"
+                  className="space-y-4"
                 >
-                  <div className="w-full lg:w-1/2 space-y-6">
-                    <div className="mb-8">
-                      <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Paso 2: Generar CV</h2>
-                      <p className="text-slate-500">Completa tu información o sube tu PDF para que la IA genere la mejor versión de tu CV.</p>
-                    </div>
-                    
-                    <CVForm 
-                      data={cvData} 
-                      onChange={setCvData} 
-                    />
-                    
-                    <div className="sticky bottom-4 z-20 bg-white/80 backdrop-blur p-4 rounded-2xl border border-slate-200 shadow-xl flex gap-4">
-                      <button
-                        onClick={() => setCurrentStep(1)}
-                        className="px-6 py-4 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all"
-                      >
-                        Atrás
-                      </button>
-                      <button
-                        onClick={handleGenerateFromJob}
-                        disabled={isGenerating}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-black text-lg shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-3 uppercase italic"
-                      >
-                        {isGenerating ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} />}
-                        Generar CV Optimizado
-                      </button>
-                    </div>
+                  {/* Mobile Tab Control */}
+                  <div className="flex lg:hidden bg-slate-900 p-1.5 rounded-2xl border border-slate-800 shadow-lg sticky top-0 z-30">
+                    <button
+                      type="button"
+                      onClick={() => setMobileTab('edit')}
+                      className={`flex-1 py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                        mobileTab === 'edit'
+                          ? 'bg-indigo-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <FileText size={16} />
+                      Editar Formulario
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMobileTab('preview')}
+                      className={`flex-1 py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                        mobileTab === 'preview'
+                          ? 'bg-indigo-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Eye size={16} />
+                      Ver CV Completo
+                    </button>
                   </div>
-                  
-                  <div className="w-full lg:w-1/2 bg-slate-200 rounded-3xl overflow-hidden relative border-4 border-white shadow-2xl min-h-[600px]">
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-slate-800/80 backdrop-blur text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-lg border border-white/10">
-                      Vista Previa en Tiempo Real
+
+                  <div className="flex flex-col lg:flex-row gap-8 h-full items-start">
+                    {/* Form Column */}
+                    <div className={`w-full lg:w-1/2 space-y-6 ${mobileTab === 'edit' ? 'block' : 'hidden lg:block'}`}>
+                      <div className="mb-8">
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Paso 2: Generar CV</h2>
+                        <p className="text-slate-500">Completa tu información o sube tu PDF para que la IA genere la mejor versión de tu CV.</p>
+                      </div>
+                      
+                      <CVForm 
+                        data={cvData} 
+                        onChange={setCvData} 
+                      />
+                      
+                      <div className="sticky bottom-4 z-20 bg-white/80 backdrop-blur p-4 rounded-2xl border border-slate-200 shadow-xl flex gap-4">
+                        <button
+                          onClick={() => setCurrentStep(1)}
+                          className="px-6 py-4 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all"
+                        >
+                          Atrás
+                        </button>
+                        <button
+                          onClick={handleGenerateFromJob}
+                          disabled={isGenerating}
+                          className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-black text-lg shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-3 uppercase italic"
+                        >
+                          {isGenerating ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} />}
+                          Generar CV Optimizado
+                        </button>
+                      </div>
                     </div>
-                    <div className="h-full overflow-y-auto p-8 flex justify-center items-start bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat">
-                      <CVPreview data={cvData} ref={previewRef} />
+                    
+                    {/* Preview & Customizer Column */}
+                    <div className={`w-full lg:w-1/2 bg-slate-100 rounded-3xl overflow-hidden relative border-4 border-slate-200 shadow-2xl min-h-[600px] flex flex-col ${mobileTab === 'preview' ? 'block' : 'hidden lg:flex'}`}>
+                      <div className="bg-slate-900 px-4 py-3 text-white flex flex-col gap-2 border-b border-slate-800">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5 shrink-0">
+                            <Sparkles size={14} className="text-amber-400" /> Vista Previa & Editor:
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowCustomizer(!showCustomizer)}
+                            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                              showCustomizer
+                                ? 'bg-indigo-600 text-white shadow ring-2 ring-indigo-400'
+                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                            }`}
+                          >
+                            <Zap size={13} className="text-amber-400" />
+                            {showCustomizer ? 'Ocultar Editor' : 'Personalizar Colores'}
+                          </button>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5 w-full">
+                          <button
+                            onClick={() => setCvData({ ...cvData, template: 'ats-ganador' })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
+                              (cvData.template || 'ats-ganador') === 'ats-ganador'
+                                ? 'bg-emerald-500 text-slate-950 shadow-md ring-2 ring-emerald-400'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            ★ ATS
+                          </button>
+                          <button
+                            onClick={() => setCvData({ ...cvData, template: 'minimalista-nordico' })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              cvData.template === 'minimalista-nordico'
+                                ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-400'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            ❄ Nórdico
+                          </button>
+                          <button
+                            onClick={() => setCvData({ ...cvData, template: 'tech-innovador' })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              cvData.template === 'tech-innovador'
+                                ? 'bg-cyan-600 text-white shadow-md ring-2 ring-cyan-400'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            ⚡ Tech
+                          </button>
+                          <button
+                            onClick={() => setCvData({ ...cvData, template: 'corporativo-premium' })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              cvData.template === 'corporativo-premium'
+                                ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-400'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            💼 Corporativo
+                          </button>
+                          <button
+                            onClick={() => setCvData({ ...cvData, template: 'minimalista-editorial' })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              cvData.template === 'minimalista-editorial'
+                                ? 'bg-amber-600 text-white shadow-md ring-2 ring-amber-400'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            ✒ Editorial
+                          </button>
+                          <button
+                            onClick={() => setCvData({ ...cvData, template: 'infografico-moderno' })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              cvData.template === 'infografico-moderno'
+                                ? 'bg-violet-600 text-white shadow-md ring-2 ring-violet-400'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            📊 Infográfico
+                          </button>
+                          <button
+                            onClick={() => setCvData({ ...cvData, template: 'startup-bold' })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              cvData.template === 'startup-bold'
+                                ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-400'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            🚀 Startup
+                          </button>
+                          <button
+                            onClick={() => setCvData({ ...cvData, template: 'ejecutivo' })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              cvData.template === 'ejecutivo'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Ejecutivo
+                          </button>
+                          <button
+                            onClick={() => setCvData({ ...cvData, template: 'classic' })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              cvData.template === 'classic'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            Clásico
+                          </button>
+                          <button
+                            onClick={() => setCvData({ ...cvData, template: 'moderno-foto' })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              cvData.template === 'moderno-foto'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            📷 Moderno
+                          </button>
+                          <button
+                            onClick={() => setCvData({ ...cvData, template: 'creativo-foto' })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              cvData.template === 'creativo-foto'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'bg-slate-800 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            🎨 Creativo
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto flex flex-col items-center bg-slate-100 min-h-0">
+                        {showCustomizer && (
+                          <div className="w-full p-4 no-print border-b border-slate-200 bg-white">
+                            <ThemeCustomizer data={cvData} onChange={setCvData} />
+                          </div>
+                        )}
+                        <CVViewerContainer
+                          data={cvData}
+                          previewRef={previewRef}
+                          onDownloadVectorPDF={handleVectorDownload}
+                          onPrintPDF={handlePrint}
+                        />
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -541,16 +934,16 @@ export default function App() {
 
                   <div className="relative w-full max-w-6xl flex flex-col lg:flex-row items-center justify-center gap-12">
                     {/* CV Preview being scanned */}
-                    <div className="relative w-full max-w-md aspect-[1/1.414] bg-white rounded-lg shadow-2xl overflow-hidden transform -rotate-2 group">
-                      <div className="h-full overflow-hidden scale-75 origin-top opacity-60 grayscale group-hover:grayscale-0 transition-all duration-1000">
+                    <div className="relative w-full max-w-md aspect-[1/1.414] bg-white rounded-lg shadow-2xl overflow-hidden transform -rotate-1 group border-4 border-indigo-400">
+                      <div className="h-full overflow-hidden scale-75 origin-top opacity-100 transition-all">
                         <CVPreview data={cvData} />
                       </div>
                       
                       {/* Scanning Line */}
                       <motion.div
                         animate={{ top: ["0%", "100%", "0%"] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                        className="absolute left-0 right-0 h-1 bg-cyan-400 shadow-[0_0_20px_cyan] z-20"
+                        transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                        className="absolute left-0 right-0 h-1.5 bg-cyan-400 shadow-[0_0_25px_cyan] z-20"
                       />
                       
                       {/* Scanning Overlay */}
@@ -681,26 +1074,58 @@ export default function App() {
                           </div>
                         ) : (
                           <div className="space-y-4">
-                            <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <button
+                                onClick={handleVectorDownload}
+                                disabled={isDownloading}
+                                className="flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3.5 rounded-xl font-black text-sm transition-all active:scale-95 shadow-lg uppercase italic"
+                                title="Descarga directa de archivo PDF Vectorial nítido (.pdf) con texto seleccionable"
+                              >
+                                {isDownloading ? <Loader2 className="animate-spin" size={20} /> : <FileDown size={20} />}
+                                Descargar PDF Vectorial
+                              </button>
+
                               <button
                                 onClick={handleDirectDownload}
                                 disabled={isDownloading}
-                                className="flex-1 flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-lg transition-all active:scale-95 shadow-xl uppercase italic"
+                                className="flex items-center justify-center gap-2.5 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3.5 rounded-xl font-black text-sm transition-all active:scale-95 shadow-lg uppercase italic"
+                                title="Genera un PDF HD en alta resolución (300 DPI) con hipervínculos activos"
                               >
-                                {isDownloading ? <Loader2 className="animate-spin" size={24} /> : <FileDown size={24} />}
-                                Descargar PDF
-                              </button>
-                              <button
-                                onClick={handlePrint}
-                                className="flex-1 flex items-center justify-center gap-3 bg-slate-800 hover:bg-slate-700 text-white px-8 py-4 rounded-2xl font-black text-lg transition-all active:scale-95 border border-slate-700 uppercase italic"
-                              >
-                                <Download size={24} />
-                                Imprimir
+                                {isDownloading ? <Loader2 className="animate-spin" size={20} /> : <Download size={20} />}
+                                Descargar PDF HD
                               </button>
                             </div>
-                            <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                              Puedes descargar tu CV optimizado tantas veces como necesites
-                            </p>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <button
+                                onClick={handlePrint}
+                                className="flex items-center justify-center gap-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-5 py-3 rounded-xl font-bold text-xs transition-all active:scale-95 uppercase tracking-wider"
+                                title="Abre el cuadro de impresión nativo del navegador para imprimir o guardar como PDF"
+                              >
+                                <Printer size={18} className="text-indigo-400" />
+                                Imprimir / Guardar
+                              </button>
+
+                              <button
+                                onClick={handleDownloadHTML}
+                                className="flex items-center justify-center gap-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-5 py-3 rounded-xl font-bold text-xs transition-all active:scale-95 uppercase tracking-wider"
+                                title="Descarga una versión web interactiva (.html) que cualquier persona puede abrir con links clicables"
+                              >
+                                <FileText size={18} className="text-cyan-400" />
+                                Web CV Interactivo (.html)
+                              </button>
+                            </div>
+
+                            <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/80 text-[11px] text-slate-300 space-y-1">
+                              <p className="font-bold text-indigo-300 flex items-center gap-1.5">
+                                <CheckCircle2 size={14} className="text-emerald-400" />
+                                Formatos Disponibles:
+                              </p>
+                              <p>• <strong>PDF Vectorial (Descarga directa):</strong> Documento PDF nativo con texto nítido, no pixelado y seleccionable.</p>
+                              <p>• <strong>PDF HD:</strong> Imagen 300 DPI de alta calidad con capa de enlaces activos.</p>
+                              <p>• <strong>Imprimir / Guardar:</strong> Utiliza el motor de impresión del navegador para PDF A4 exacto.</p>
+                              <p>• <strong>Web CV (.html):</strong> Archivo web interactivo para compartir online.</p>
+                            </div>
                           </div>
                         )}
                         
@@ -714,12 +1139,151 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="w-full lg:w-1/2 bg-white rounded-3xl overflow-hidden relative border-8 border-slate-200 shadow-2xl min-h-[600px] transform rotate-1">
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-slate-800/80 backdrop-blur text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-lg border border-white/10">
-                      Resultado Final
+                  <div className="w-full lg:w-1/2 bg-slate-100 rounded-3xl overflow-hidden relative border-8 border-slate-200 shadow-2xl min-h-[600px] flex flex-col">
+                    <div className="bg-slate-900 px-4 py-3 text-white flex flex-col gap-2 border-b border-slate-800">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5 shrink-0">
+                          <Sparkles size={14} className="text-amber-400" /> Plantilla Final & Editor:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowCustomizer(!showCustomizer)}
+                          className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            showCustomizer
+                              ? 'bg-indigo-600 text-white shadow ring-2 ring-indigo-400'
+                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          }`}
+                        >
+                          <Zap size={13} className="text-amber-400" />
+                          {showCustomizer ? 'Ocultar Editor' : 'Personalizar Diseño'}
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 w-full">
+                        <button
+                          onClick={() => setCvData({ ...cvData, template: 'ats-ganador' })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
+                            (cvData.template || 'ats-ganador') === 'ats-ganador'
+                              ? 'bg-emerald-500 text-slate-950 shadow-md ring-2 ring-emerald-400'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          ★ ATS
+                        </button>
+                        <button
+                          onClick={() => setCvData({ ...cvData, template: 'minimalista-nordico' })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            cvData.template === 'minimalista-nordico'
+                              ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-400'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          ❄ Nórdico
+                        </button>
+                        <button
+                          onClick={() => setCvData({ ...cvData, template: 'tech-innovador' })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            cvData.template === 'tech-innovador'
+                              ? 'bg-cyan-600 text-white shadow-md ring-2 ring-cyan-400'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          ⚡ Tech
+                        </button>
+                        <button
+                          onClick={() => setCvData({ ...cvData, template: 'corporativo-premium' })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            cvData.template === 'corporativo-premium'
+                              ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-400'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          💼 Corporativo
+                        </button>
+                        <button
+                          onClick={() => setCvData({ ...cvData, template: 'minimalista-editorial' })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            cvData.template === 'minimalista-editorial'
+                              ? 'bg-amber-600 text-white shadow-md ring-2 ring-amber-400'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          ✒ Editorial
+                        </button>
+                        <button
+                          onClick={() => setCvData({ ...cvData, template: 'infografico-moderno' })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            cvData.template === 'infografico-moderno'
+                              ? 'bg-violet-600 text-white shadow-md ring-2 ring-violet-400'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          📊 Infográfico
+                        </button>
+                        <button
+                          onClick={() => setCvData({ ...cvData, template: 'startup-bold' })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            cvData.template === 'startup-bold'
+                              ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-400'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          🚀 Startup
+                        </button>
+                        <button
+                          onClick={() => setCvData({ ...cvData, template: 'ejecutivo' })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            cvData.template === 'ejecutivo'
+                              ? 'bg-indigo-600 text-white shadow-md'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          Ejecutivo
+                        </button>
+                        <button
+                          onClick={() => setCvData({ ...cvData, template: 'classic' })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            cvData.template === 'classic'
+                              ? 'bg-indigo-600 text-white shadow-md'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          Clásico
+                        </button>
+                        <button
+                          onClick={() => setCvData({ ...cvData, template: 'moderno-foto' })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            cvData.template === 'moderno-foto'
+                              ? 'bg-indigo-600 text-white shadow-md'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          📷 Moderno
+                        </button>
+                        <button
+                          onClick={() => setCvData({ ...cvData, template: 'creativo-foto' })}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            cvData.template === 'creativo-foto'
+                              ? 'bg-indigo-600 text-white shadow-md'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          🎨 Creativo
+                        </button>
+                      </div>
                     </div>
-                    <div className="h-full overflow-y-auto p-8 flex justify-center items-start bg-slate-50">
-                      <CVPreview data={cvData} ref={previewRef} />
+                    <div className="flex-1 overflow-y-auto flex flex-col items-center bg-slate-100 min-h-0">
+                      {showCustomizer && (
+                        <div className="w-full p-4 no-print border-b border-slate-200 bg-white">
+                          <ThemeCustomizer data={cvData} onChange={setCvData} />
+                        </div>
+                      )}
+                      <CVViewerContainer
+                        data={cvData}
+                        previewRef={previewRef}
+                        onDownloadVectorPDF={handleVectorDownload}
+                        onPrintPDF={handlePrint}
+                      />
                     </div>
                   </div>
                 </motion.div>
