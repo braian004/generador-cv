@@ -18,6 +18,7 @@ import {
   Zap,
   Code,
   BookOpen,
+  FolderKanban,
 } from 'lucide-react';
 
 interface CVPreviewProps {
@@ -260,17 +261,17 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
 
             <div className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[9pt] text-slate-700 font-medium ${isCentered ? 'justify-center' : 'justify-start'}`}>
               {data?.personalInfo?.location && (
-                <span className="inline-flex items-center gap-1 whitespace-nowrap">
-                  <MapPin size={12} style={{ color: primaryColor }} />
-                  {data.personalInfo.location}
+                <span className="inline-flex items-center gap-1 leading-none whitespace-nowrap">
+                  <MapPin size={12} className="shrink-0 leading-none inline-block align-middle" style={{ color: primaryColor }} />
+                  <span className="leading-none">{data.personalInfo.location}</span>
                 </span>
               )}
               {data?.personalInfo?.phone && (
                 <>
                   {data?.personalInfo?.location && <span className="text-slate-300">•</span>}
-                  <span className="inline-flex items-center gap-1 whitespace-nowrap">
-                    <Phone size={12} style={{ color: primaryColor }} />
-                    {data.personalInfo.phone}
+                  <span className="inline-flex items-center gap-1 leading-none whitespace-nowrap">
+                    <Phone size={12} className="shrink-0 leading-none inline-block align-middle" style={{ color: primaryColor }} />
+                    <span className="leading-none">{data.personalInfo.phone}</span>
                   </span>
                 </>
               )}
@@ -279,11 +280,11 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
                   <span className="text-slate-300">•</span>
                   <a
                     href={`mailto:${data.personalInfo.email}`}
-                    className="inline-flex items-center gap-1 font-semibold underline underline-offset-2 whitespace-nowrap"
+                    className="inline-flex items-center gap-1 leading-none font-semibold underline underline-offset-2 whitespace-nowrap"
                     style={{ color: primaryColor }}
                   >
-                    <Mail size={12} style={{ color: primaryColor }} />
-                    {data.personalInfo.email}
+                    <Mail size={12} className="shrink-0 leading-none inline-block align-middle" style={{ color: primaryColor }} />
+                    <span className="leading-none">{data.personalInfo.email}</span>
                   </a>
                 </>
               )}
@@ -294,12 +295,12 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
                     href={formatLink(data.personalInfo.linkedin)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 font-semibold underline underline-offset-2 whitespace-nowrap"
+                    className="inline-flex items-center gap-1 leading-none font-semibold underline underline-offset-2 whitespace-nowrap"
                     style={{ color: primaryColor }}
                   >
-                    <Linkedin size={12} style={{ color: primaryColor }} />
-                    {cleanLinkText(data.personalInfo.linkedin)}
-                    <ExternalLink size={10} className="inline opacity-70" />
+                    <Linkedin size={12} className="shrink-0 leading-none inline-block align-middle" style={{ color: primaryColor }} />
+                    <span className="leading-none">{cleanLinkText(data.personalInfo.linkedin)}</span>
+                    <ExternalLink size={10} className="inline opacity-70 shrink-0 leading-none align-middle" />
                   </a>
                 </>
               )}
@@ -310,12 +311,28 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
                     href={formatLink(data.personalInfo.website)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 font-semibold underline underline-offset-2 whitespace-nowrap"
+                    className="inline-flex items-center gap-1 leading-none font-semibold underline underline-offset-2 whitespace-nowrap"
                     style={{ color: primaryColor }}
                   >
-                    <Globe size={12} style={{ color: primaryColor }} />
-                    {cleanLinkText(data.personalInfo.website)}
-                    <ExternalLink size={10} className="inline opacity-70" />
+                    <Globe size={12} className="shrink-0 leading-none inline-block align-middle" style={{ color: primaryColor }} />
+                    <span className="leading-none">{cleanLinkText(data.personalInfo.website)}</span>
+                    <ExternalLink size={10} className="inline opacity-70 shrink-0 leading-none align-middle" />
+                  </a>
+                </>
+              )}
+              {data?.personalInfo?.portfolio && (
+                <>
+                  <span className="text-slate-300">•</span>
+                  <a
+                    href={formatLink(data.personalInfo.portfolio)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 leading-none font-semibold underline underline-offset-2 whitespace-nowrap"
+                    style={{ color: primaryColor }}
+                  >
+                    <FolderKanban size={12} className="shrink-0 leading-none inline-block align-middle" style={{ color: primaryColor }} />
+                    <span className="leading-none">{cleanLinkText(data.personalInfo.portfolio)}</span>
+                    <ExternalLink size={10} className="inline opacity-70 shrink-0 leading-none align-middle" />
                   </a>
                 </>
               )}
@@ -546,6 +563,12 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
                   <span>{cleanLinkText(data.personalInfo.website)}</span>
                 </a>
               )}
+              {data?.personalInfo?.portfolio && (
+                <a href={formatLink(data.personalInfo.portfolio)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-slate-300 hover:text-white break-all">
+                  <FolderKanban size={13} style={{ color: primaryColor }} className="shrink-0" />
+                  <span>{cleanLinkText(data.personalInfo.portfolio)}</span>
+                </a>
+              )}
             </div>
 
             {/* Certifications */}
@@ -734,8 +757,20 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
                 )}
                 {data?.personalInfo?.linkedin && (
                   <a href={formatLink(data.personalInfo.linkedin)} target="_blank" rel="noopener noreferrer" className="hover:text-white flex items-center gap-1 whitespace-nowrap">
-                    <Linkedin size={11} className="text-white/80" />
+                    <Linkedin size={11} className="text-white/80 shrink-0" />
                     <span>{cleanLinkText(data.personalInfo.linkedin)}</span>
+                  </a>
+                )}
+                {data?.personalInfo?.website && (
+                  <a href={formatLink(data.personalInfo.website)} target="_blank" rel="noopener noreferrer" className="hover:text-white flex items-center gap-1 whitespace-nowrap">
+                    <Globe size={11} className="text-white/80 shrink-0" />
+                    <span>{cleanLinkText(data.personalInfo.website)}</span>
+                  </a>
+                )}
+                {data?.personalInfo?.portfolio && (
+                  <a href={formatLink(data.personalInfo.portfolio)} target="_blank" rel="noopener noreferrer" className="hover:text-white flex items-center gap-1 whitespace-nowrap">
+                    <FolderKanban size={11} className="text-white/80 shrink-0" />
+                    <span>{cleanLinkText(data.personalInfo.portfolio)}</span>
                   </a>
                 )}
               </div>
@@ -902,8 +937,14 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
                 )}
                 {data?.personalInfo?.website && (
                   <a href={formatLink(data.personalInfo.website)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-semibold hover:underline whitespace-nowrap" style={{ color: primaryColor }}>
-                    <Globe size={13} style={{ color: primaryColor }} />
+                    <Globe size={13} style={{ color: primaryColor }} className="shrink-0" />
                     <span>{cleanLinkText(data.personalInfo.website)}</span>
+                  </a>
+                )}
+                {data?.personalInfo?.portfolio && (
+                  <a href={formatLink(data.personalInfo.portfolio)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-semibold hover:underline whitespace-nowrap" style={{ color: primaryColor }}>
+                    <FolderKanban size={13} style={{ color: primaryColor }} className="shrink-0" />
+                    <span>{cleanLinkText(data.personalInfo.portfolio)}</span>
                   </a>
                 )}
               </div>
@@ -1086,8 +1127,14 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
                 )}
                 {data?.personalInfo?.website && (
                   <a href={formatLink(data.personalInfo.website)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-bold underline" style={{ color: primaryColor }}>
-                    <Globe size={12} style={{ color: primaryColor }} />
+                    <Globe size={12} style={{ color: primaryColor }} className="shrink-0" />
                     {cleanLinkText(data.personalInfo.website)}
+                  </a>
+                )}
+                {data?.personalInfo?.portfolio && (
+                  <a href={formatLink(data.personalInfo.portfolio)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-bold underline" style={{ color: primaryColor }}>
+                    <FolderKanban size={12} style={{ color: primaryColor }} className="shrink-0" />
+                    {cleanLinkText(data.personalInfo.portfolio)}
                   </a>
                 )}
               </div>
@@ -1288,8 +1335,14 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
                 )}
                 {data?.personalInfo?.website && (
                   <a href={formatLink(data.personalInfo.website)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-bold bg-slate-900/90 px-2 py-0.5 rounded border border-slate-800 hover:underline" style={{ color: primaryColor }}>
-                    <Globe size={11} />
+                    <Globe size={11} className="shrink-0" />
                     {cleanLinkText(data.personalInfo.website)}
+                  </a>
+                )}
+                {data?.personalInfo?.portfolio && (
+                  <a href={formatLink(data.personalInfo.portfolio)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-bold bg-slate-900/90 px-2 py-0.5 rounded border border-slate-800 hover:underline" style={{ color: primaryColor }}>
+                    <FolderKanban size={11} className="shrink-0" />
+                    {cleanLinkText(data.personalInfo.portfolio)}
                   </a>
                 )}
               </div>
@@ -1478,8 +1531,20 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
                   )}
                   {data?.personalInfo?.linkedin && (
                     <a href={formatLink(data.personalInfo.linkedin)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline">
-                      <Linkedin size={12} style={{ color: primaryColor }} />
+                      <Linkedin size={12} style={{ color: primaryColor }} className="shrink-0" />
                       {cleanLinkText(data.personalInfo.linkedin)}
+                    </a>
+                  )}
+                  {data?.personalInfo?.website && (
+                    <a href={formatLink(data.personalInfo.website)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline">
+                      <Globe size={12} style={{ color: primaryColor }} className="shrink-0" />
+                      {cleanLinkText(data.personalInfo.website)}
+                    </a>
+                  )}
+                  {data?.personalInfo?.portfolio && (
+                    <a href={formatLink(data.personalInfo.portfolio)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline">
+                      <FolderKanban size={12} style={{ color: primaryColor }} className="shrink-0" />
+                      {cleanLinkText(data.personalInfo.portfolio)}
                     </a>
                   )}
                 </div>
@@ -1667,8 +1732,20 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
                 )}
                 {data?.personalInfo?.linkedin && (
                   <a href={formatLink(data.personalInfo.linkedin)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-bold underline decoration-slate-300" style={{ color: primaryColor }}>
-                    <Linkedin size={12} style={{ color: primaryColor }} />
+                    <Linkedin size={12} style={{ color: primaryColor }} className="shrink-0" />
                     {cleanLinkText(data.personalInfo.linkedin)}
+                  </a>
+                )}
+                {data?.personalInfo?.website && (
+                  <a href={formatLink(data.personalInfo.website)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-bold underline decoration-slate-300" style={{ color: primaryColor }}>
+                    <Globe size={12} style={{ color: primaryColor }} className="shrink-0" />
+                    {cleanLinkText(data.personalInfo.website)}
+                  </a>
+                )}
+                {data?.personalInfo?.portfolio && (
+                  <a href={formatLink(data.personalInfo.portfolio)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-bold underline decoration-slate-300" style={{ color: primaryColor }}>
+                    <FolderKanban size={12} style={{ color: primaryColor }} className="shrink-0" />
+                    {cleanLinkText(data.personalInfo.portfolio)}
                   </a>
                 )}
               </div>
@@ -1838,8 +1915,20 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
                 )}
                 {data?.personalInfo?.linkedin && (
                   <a href={formatLink(data.personalInfo.linkedin)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200 hover:underline" style={{ color: primaryColor }}>
-                    <Linkedin size={12} />
+                    <Linkedin size={12} className="shrink-0" />
                     {cleanLinkText(data.personalInfo.linkedin)}
+                  </a>
+                )}
+                {data?.personalInfo?.website && (
+                  <a href={formatLink(data.personalInfo.website)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200 hover:underline" style={{ color: primaryColor }}>
+                    <Globe size={12} className="shrink-0" />
+                    {cleanLinkText(data.personalInfo.website)}
+                  </a>
+                )}
+                {data?.personalInfo?.portfolio && (
+                  <a href={formatLink(data.personalInfo.portfolio)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200 hover:underline" style={{ color: primaryColor }}>
+                    <FolderKanban size={12} className="shrink-0" />
+                    {cleanLinkText(data.personalInfo.portfolio)}
                   </a>
                 )}
               </div>
@@ -2029,8 +2118,20 @@ export const CVPreview = React.forwardRef<HTMLDivElement, CVPreviewProps>(({ dat
                 )}
                 {data?.personalInfo?.linkedin && (
                   <a href={formatLink(data.personalInfo.linkedin)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-white font-bold" style={{ color: primaryColor }}>
-                    <Linkedin size={11} />
+                    <Linkedin size={11} className="shrink-0" />
                     {cleanLinkText(data.personalInfo.linkedin)}
+                  </a>
+                )}
+                {data?.personalInfo?.website && (
+                  <a href={formatLink(data.personalInfo.website)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-white font-bold" style={{ color: primaryColor }}>
+                    <Globe size={11} className="shrink-0" />
+                    {cleanLinkText(data.personalInfo.website)}
+                  </a>
+                )}
+                {data?.personalInfo?.portfolio && (
+                  <a href={formatLink(data.personalInfo.portfolio)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-white font-bold" style={{ color: primaryColor }}>
+                    <FolderKanban size={11} className="shrink-0" />
+                    {cleanLinkText(data.personalInfo.portfolio)}
                   </a>
                 )}
               </div>

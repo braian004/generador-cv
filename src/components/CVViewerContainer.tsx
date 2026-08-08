@@ -71,13 +71,14 @@ export const CVViewerContainer: React.FC<CVViewerContainerProps> = ({
   }, [data, template]);
 
   // Calculate effective scale
-  // 794px corresponds to 210mm at standard 96 DPI
+  // 794px corresponds to 210mm A4 width at standard 96 DPI
   const targetWidth = 794;
   const padding = 24; // padding inside container
-  const availableWidth = Math.max(280, containerWidth - padding);
-  const autoScale = Math.min(1.0, availableWidth / targetWidth);
+  const availableWidth = Math.max(260, containerWidth - padding);
+  // Allow autoScale up to 1.2 on large screens so it fills space nicely
+  const autoScale = availableWidth / targetWidth;
 
-  const effectiveScale = zoomMode === 'fit' ? Math.max(0.35, autoScale) : manualScale;
+  const effectiveScale = zoomMode === 'fit' ? Math.min(1.25, Math.max(0.35, autoScale)) : manualScale;
 
   const handleZoomIn = () => {
     setZoomMode('manual');

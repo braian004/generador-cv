@@ -31,19 +31,25 @@
     .no-print {
       display: none !important;
     }
+    svg {
+      display: inline-block !important;
+      vertical-align: middle !important;
+    }
     .cv-paper,
     [data-cv-paper] {
       width: 210mm !important;
-      min-height: 297mm !important;
       max-width: none !important;
       margin: 0 auto !important;
-      padding: 12mm 15mm !important;
       box-shadow: none !important;
       border: none !important;
       border-radius: 0 !important;
       transform: none !important;
       position: static !important;
       background: #ffffff !important;
+    }
+    section, .cv-section {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
     a {
       text-decoration: none !important;

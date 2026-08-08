@@ -6,8 +6,9 @@ import { ThemeCustomizer } from './components/ThemeCustomizer';
 import { Pricing } from './components/Pricing';
 import { FeaturesInfo } from './components/FeaturesInfo';
 import { StepIndicator } from './components/StepIndicator';
+import { VoiceAssistantModal } from './components/VoiceAssistantModal';
 import { CVData, initialCVData } from './types';
-import { Info, X, Eye } from 'lucide-react';
+import { Info, X, Eye, Mic } from 'lucide-react';
 import { optimizeCV, parseCVFromText, generateOptimizedCV, analyzeATS } from './services/gemini';
 import { useReactToPrint } from 'react-to-print';
 import { Download, Sparkles, Loader2, CheckCircle2, AlertCircle, Upload, FileText, FileDown, Search, Target, Zap, Printer } from 'lucide-react';
@@ -25,6 +26,7 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(true);
+  const [isVoiceAssistantOpen, setIsVoiceAssistantOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [mobileTab, setMobileTab] = useState<'edit' | 'preview'>('edit');
   const [cvData, setCvData] = useState<CVData>(initialCVData);
@@ -595,11 +597,16 @@ export default function App() {
     setAiResult(null);
   };
 
+  const handleOpenVoiceAssistant = () => {
+    setCurrentStep(2);
+    setIsVoiceAssistantOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-slate-900 text-white p-3 md:p-4 shadow-lg sticky top-0 z-50 no-print">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 md:gap-4">
-          <div className="flex items-center justify-between w-full sm:w-auto">
+        <div className="w-full max-w-[1920px] mx-auto flex flex-col lg:flex-row justify-between items-center gap-3 md:gap-4 px-2 sm:px-4">
+          <div className="flex items-center justify-between w-full lg:w-auto">
             <div className="flex items-center gap-3">
               <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-500/20">
                 <Sparkles size={20} className="text-white" />
@@ -611,11 +618,19 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center justify-center gap-2 w-full lg:w-auto my-1 lg:my-0">
             <StepIndicator currentStep={currentStep} steps={steps} />
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
+          <div className="flex items-center gap-2 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0 scrollbar-hide">
+            <button
+              onClick={handleOpenVoiceAssistant}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-full font-bold transition-all active:scale-95 border border-emerald-500/80 shadow-md"
+              title="Dictar y escribir en el CV con Asistente de Voz IA en Vivo"
+            >
+              <Mic size={16} className="text-emerald-400 animate-pulse" />
+              <span className="whitespace-nowrap text-xs md:text-sm">Asistente de Voz</span>
+            </button>
             <input
               type="file"
               ref={fileInputRef}
@@ -647,8 +662,8 @@ export default function App() {
       </header>
 
       <main className="flex-1 flex flex-col overflow-hidden bg-slate-50">
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="max-w-6xl mx-auto">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8">
+          <div className="w-full max-w-[1920px] mx-auto">
             <AnimatePresence mode="wait">
               {/* Step 1: Paste Job Offer */}
               {currentStep === 1 && (
@@ -734,9 +749,9 @@ export default function App() {
                     </button>
                   </div>
 
-                  <div className="flex flex-col lg:flex-row gap-8 h-full items-start">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8 items-start w-full">
                     {/* Form Column */}
-                    <div className={`w-full lg:w-1/2 space-y-6 ${mobileTab === 'edit' ? 'block' : 'hidden lg:block'}`}>
+                    <div className={`w-full lg:col-span-5 xl:col-span-5 space-y-6 ${mobileTab === 'edit' ? 'block' : 'hidden lg:block'}`}>
                       <div className="mb-8">
                         <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Paso 2: Generar CV</h2>
                         <p className="text-slate-500">Completa tu información o sube tu PDF para que la IA genere la mejor versión de tu CV.</p>
@@ -745,6 +760,7 @@ export default function App() {
                       <CVForm 
                         data={cvData} 
                         onChange={setCvData} 
+                        onOpenVoiceAssistant={() => setIsVoiceAssistantOpen(true)}
                       />
                       
                       <div className="sticky bottom-4 z-20 bg-white/80 backdrop-blur p-4 rounded-2xl border border-slate-200 shadow-xl flex gap-4">
@@ -766,7 +782,7 @@ export default function App() {
                     </div>
                     
                     {/* Preview & Customizer Column */}
-                    <div className={`w-full lg:w-1/2 bg-slate-100 rounded-3xl overflow-hidden relative border-4 border-slate-200 shadow-2xl min-h-[600px] flex flex-col ${mobileTab === 'preview' ? 'block' : 'hidden lg:flex'}`}>
+                    <div className={`w-full lg:col-span-7 xl:col-span-7 bg-slate-100 rounded-3xl overflow-hidden relative border-4 border-slate-200 shadow-2xl min-h-[650px] flex flex-col ${mobileTab === 'preview' ? 'block' : 'hidden lg:flex'}`}>
                       <div className="bg-slate-900 px-4 py-3 text-white flex flex-col gap-2 border-b border-slate-800">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5 shrink-0">
@@ -997,9 +1013,9 @@ export default function App() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="flex flex-col lg:flex-row gap-8 h-full"
+                  className="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8 items-start w-full"
                 >
-                  <div className="w-full lg:w-1/2 space-y-8">
+                  <div className="w-full lg:col-span-5 xl:col-span-5 space-y-8">
                     <div className="mb-8">
                       <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">Paso 4: ¡Tu CV está Listo!</h2>
                       <p className="text-slate-500">Hemos optimizado tu CV y analizado su compatibilidad con el sistema ATS.</p>
@@ -1139,7 +1155,7 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="w-full lg:w-1/2 bg-slate-100 rounded-3xl overflow-hidden relative border-8 border-slate-200 shadow-2xl min-h-[600px] flex flex-col">
+                  <div className="w-full lg:col-span-7 xl:col-span-7 bg-slate-100 rounded-3xl overflow-hidden relative border-4 border-slate-200 shadow-2xl min-h-[650px] flex flex-col">
                     <div className="bg-slate-900 px-4 py-3 text-white flex flex-col gap-2 border-b border-slate-800">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5 shrink-0">
@@ -1395,6 +1411,28 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating Voice Assistant Action Button */}
+      <div className="fixed bottom-6 right-6 z-40 no-print">
+        <button
+          onClick={handleOpenVoiceAssistant}
+          className="group relative flex items-center gap-2.5 bg-slate-900/95 hover:bg-slate-800 text-white px-5 py-2.5 rounded-full shadow-2xl border border-emerald-500 hover:border-emerald-400 transition-all transform hover:scale-105 active:scale-95"
+          title="Hablar con el Asistente de IA para redactar y modificar tu CV"
+        >
+          <Mic size={20} className="text-white shrink-0" />
+          <span className="font-bold text-xs sm:text-sm tracking-wide text-white whitespace-nowrap">
+            Hablar con Asistente CV
+          </span>
+        </button>
+      </div>
+
+      {/* Voice Assistant Modal */}
+      <VoiceAssistantModal
+        isOpen={isVoiceAssistantOpen}
+        onClose={() => setIsVoiceAssistantOpen(false)}
+        cvData={cvData}
+        onUpdateCV={setCvData}
+      />
     </div>
   );
 }

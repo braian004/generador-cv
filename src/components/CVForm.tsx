@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { CVData, Experience, Education } from '../types';
-import { Plus, Trash2, Briefcase, GraduationCap, User, Wrench, Target, Sparkles, Link as LinkIcon, Globe, Linkedin, Mail, Phone, X, Camera, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, Briefcase, GraduationCap, User, Wrench, Target, Sparkles, Link as LinkIcon, Globe, Linkedin, Mail, Phone, X, Camera, Image as ImageIcon, FolderKanban, Mic } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface CVFormProps {
@@ -8,9 +8,10 @@ interface CVFormProps {
   onChange: (data: CVData) => void;
   onGenerateFromJob?: () => void;
   onAnalyzeATS?: () => void;
+  onOpenVoiceAssistant?: () => void;
 }
 
-export const CVForm: React.FC<CVFormProps> = ({ data, onChange }) => {
+export const CVForm: React.FC<CVFormProps> = ({ data, onChange, onOpenVoiceAssistant }) => {
   const [techInput, setTechInput] = useState('');
   const [techLevel, setTechLevel] = useState<string>('Avanzado');
   const [softInput, setSoftInput] = useState('');
@@ -293,11 +294,18 @@ export const CVForm: React.FC<CVFormProps> = ({ data, onChange }) => {
             placeholder="linkedin.com/in/tu-perfil"
           />
           <Input
-            label="Sitio Web / GitHub / Portfolio (Clickable)"
+            label="Sitio Web / GitHub (Clickable)"
             icon={<Globe size={16} className="text-emerald-600" />}
             value={data.personalInfo?.website || ''}
             onChange={(e) => updatePersonalInfo('website', e.target.value)}
             placeholder="github.com/tu-usuario"
+          />
+          <Input
+            label="Portafolio Web (Clickable)"
+            icon={<FolderKanban size={16} className="text-amber-500" />}
+            value={data.personalInfo?.portfolio || ''}
+            onChange={(e) => updatePersonalInfo('portfolio', e.target.value)}
+            placeholder="miportafolio.dev o mi-portfolio.com"
           />
         </div>
       </section>
